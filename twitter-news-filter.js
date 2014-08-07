@@ -21,6 +21,16 @@
     });
   };
 
+  function sanitize(str) {
+    str = str.replace(/<a.*?>.*?<\/a>/g, '');
+    str = str.replace(/<b.*?>.*?<\/b>/g, '');
+    str = str.replace(/\sさんから\s/, '');
+    str = str.replace(/\sさんから$/, '');
+    str = str.replace(/\s+$/, '');
+    str = str.replace(/^\s+/, '');
+    return str;
+  }
+
   // n-gram
 
   function Ngram(n, threshold) {
@@ -74,29 +84,18 @@
     this.markText(text, expr, marker, index + 1);
   };
 
-  function sanitize(str) {
-    str = str.replace(/<a.*?>.*?<\/a>/g, '');
-    str = str.replace(/<b.*?>.*?<\/b>/g, '');
-    str = str.replace(/\sさんから\s/, '');
-    str = str.replace(/\sさんから$/, '');
-    str = str.replace(/\s+$/, '');
-    str = str.replace(/^\s+/, '');
-    return str;
-  }
-
   function learnItem(item, ngram) {
-    var tweet = item.getElementsByClassName('js-tweet-text')[0];
-    tweet.innerHTML = sanitize(tweet.innerHTML);
-    ngram.addText(tweet.textContent);
+    var tweet = item.querySelector('.js-tweet-text');
+    ngram.addText(sanitize(tweet.textContent));
   }
 
   function simplifyItem(item, ngram) {
-    var tweet = item.getElementsByClassName('js-tweet-text')[0];
-    var text = ngram.simplify(tweet.textContent);
+    var tweet = item.querySelector('.js-tweet-text');
+    var text = ngram.simplify(sanitize(tweet.textContent));
     if (text.length / tweet.textContent.length < 1 - deleteThreshold) {
       item.setAttribute('style', 'display:none;');
     } else {
-      tweet.textContent = sanitize(text);
+      tweet.textContent = text;
     }
     removeElements('.js-media-container', item);
   }
@@ -106,7 +105,7 @@
   function main() {
     var ngram = new Ngram(n, frequentThreshold),
         container = document.getElementById('stream-items-id'),
-        items = container.children;
+        items = container.querySelectorAll('li[data-item-type="tweet"]');
 
     each(items, function (item) {
       learnItem(item, ngram);
@@ -121,11 +120,7 @@
     container.addEventListener('DOMNodeInserted', function (e) {
       setTimeout(function () {
         if (e.target.classList && e.target.classList.contains('js-stream-item')) {
-          var tweet = e.target.getElementsByClassName('js-tweet-text')[0];
-          tweet.innerHTML = sanitize(tweet.innerHTML);
-          setTimeout(function () {
-            simplifyItem(e.target, ngram);
-          }, 0);
+          simplifyItem(e.target, ngram);
         }
       }, 0);
     }, false);
